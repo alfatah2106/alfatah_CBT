@@ -13,7 +13,7 @@ app.use('/api/*', cors());
 // Helper to get DB pool
 const getDb = (env: Bindings) => {
   // Using hardcoded database URL as requested by user
-  const connectionString = env.DATABASE_URL || 'postgresql://.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+  const connectionString = env.DATABASE_URL || 'postgresql://neondb_owner:npg_zlv93YCDLaei@ep-lingering-waterfall-a1qif4lp-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
   const pool = new Pool({ connectionString });
   return pool;
 };
