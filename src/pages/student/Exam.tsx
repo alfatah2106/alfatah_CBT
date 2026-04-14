@@ -83,14 +83,23 @@ export default function Exam() {
     return () => clearInterval(timer);
   }, [currentExam, currentSession, user, role, navigate]);
 
-  // 4. Ping Session
+  // 4. Ping Session & Check Status
   useEffect(() => {
     if (!currentSession?.id) return;
-    const pingInterval = setInterval(() => {
-      api.pingSession(currentSession.id).catch(console.error);
-    }, 30000); // Ping every 30 seconds
+    const pingInterval = setInterval(async () => {
+      try {
+        const res = await api.pingSession(currentSession.id);
+        if (res.status === 'forced_close' || res.status === 'finished' || res.is_active === false) {
+          alert("Ujian telah dinonaktifkan atau sesi Anda telah ditutup.");
+          logout();
+          navigate('/');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 60000); // Ping every 60 seconds
     return () => clearInterval(pingInterval);
-  }, [currentSession]);
+  }, [currentSession, logout, navigate]);
 
   const handleAnswer = async (answerText: string) => {
     const q = questions[activeQuestionIndex];

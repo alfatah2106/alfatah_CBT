@@ -19,7 +19,7 @@ export default function ProctorDashboard() {
   useEffect(() => {
     if (selectedExamId) {
       loadSessions();
-      const interval = setInterval(loadSessions, 5000); // Poll every 5s
+      const interval = setInterval(loadSessions, 60000); // Poll every 60s
       return () => clearInterval(interval);
     }
   }, [selectedExamId]);

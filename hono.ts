@@ -273,6 +273,7 @@ app.post('/api/student/login', async (c) => {
   
   const session = sessionRes.rows[0];
   if (session.status === 'forced_close') return c.json({ error: 'Session closed by proctor' }, 403);
+  if (session.status === 'finished') return c.json({ error: 'Anda sudah menyelesaikan ujian ini' }, 403);
   
   return c.json({ student: studentRes.rows[0], exam, session });
 });
@@ -323,6 +324,17 @@ app.post('/api/student/ping', async (c) => {
   const { sessionId } = await c.req.json();
   const pool = getDb(c.env);
   await pool.query('UPDATE sessions SET last_ping = CURRENT_TIMESTAMP WHERE id = $1', [sessionId]);
+  
+  const { rows } = await pool.query(`
+    SELECT s.status, e.is_active 
+    FROM sessions s 
+    JOIN exams e ON s.exam_id = e.id 
+    WHERE s.id = $1
+  `, [sessionId]);
+  
+  if (rows.length > 0) {
+    return c.json({ success: true, status: rows[0].status, is_active: rows[0].is_active });
+  }
   return c.json({ success: true });
 });
 
@@ -338,6 +350,12 @@ app.post('/api/proctor/exam/:id/toggle', async (c) => {
   const { is_active } = await c.req.json();
   const pool = getDb(c.env);
   await pool.query('UPDATE exams SET is_active = $1 WHERE id = $2', [is_active, id]);
+  
+  if (!is_active) {
+    // Auto finish all active sessions for this exam when deactivated
+    await pool.query("UPDATE sessions SET status = 'finished', end_time = CURRENT_TIMESTAMP WHERE exam_id = $1 AND status = 'active'", [id]);
+  }
+  
   return c.json({ success: true });
 });
 
