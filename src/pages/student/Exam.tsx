@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Clock, AlertCircle } from 'lucide-react';
+import { useLockdown } from '@/lib/useLockdown';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,9 @@ export default function Exam() {
   const { currentExam, currentSession } = useExamStore();
   const navigate = useNavigate();
 
+  // 1. Lockdown Mode
+  useLockdown(true);
+
   const [questions, setQuestions] = useState<any[]>([]);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -31,16 +35,6 @@ export default function Exam() {
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [showBlurWarning, setShowBlurWarning] = useState(false);
   const [blurCount, setBlurCount] = useState(0);
-
-  // 1. Anti-Refresh
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
 
   // 2. Deteksi Pindah Tab (Anti-Blur)
   useEffect(() => {
