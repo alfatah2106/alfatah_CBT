@@ -63,7 +63,8 @@ export default function Exam() {
     });
 
     const durationInMs = (currentExam.duration_minutes || 0) * 60000;
-    const startTime = new Date(currentSession.start_time).getTime();
+    // Workaround: Kurangi 7 jam (7 * 60 * 60 * 1000 ms) dari startTime karena bug zona waktu
+    const startTime = new Date(currentSession.start_time).getTime() - (7 * 60 * 60 * 1000);
     const endTime = startTime + durationInMs;
 
     const timer = setInterval(() => {
