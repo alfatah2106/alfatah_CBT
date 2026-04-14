@@ -312,6 +312,20 @@ app.post('/api/student/answer', async (c) => {
   return c.json({ success: true });
 });
 
+app.post('/api/student/finish', async (c) => {
+  const { sessionId } = await c.req.json();
+  const pool = getDb(c.env);
+  await pool.query('UPDATE sessions SET status = $1, end_time = CURRENT_TIMESTAMP WHERE id = $2', ['finished', sessionId]);
+  return c.json({ success: true });
+});
+
+app.post('/api/student/ping', async (c) => {
+  const { sessionId } = await c.req.json();
+  const pool = getDb(c.env);
+  await pool.query('UPDATE sessions SET last_ping = CURRENT_TIMESTAMP WHERE id = $1', [sessionId]);
+  return c.json({ success: true });
+});
+
 // --- Proctor Endpoints ---
 app.get('/api/proctor/exams', async (c) => {
   const pool = getDb(c.env);

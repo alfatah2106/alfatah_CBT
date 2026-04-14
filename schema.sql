@@ -25,7 +25,7 @@ CREATE TABLE exams (
   pdf_url TEXT NOT NULL,
   duration_minutes INTEGER NOT NULL,
   is_active BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE questions (
@@ -41,11 +41,11 @@ CREATE TABLE sessions (
   id SERIAL PRIMARY KEY,
   student_id VARCHAR(50) REFERENCES students(id),
   exam_id INTEGER REFERENCES exams(id),
-  start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  end_time TIMESTAMP,
+  start_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  end_time TIMESTAMPTZ,
   status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'finished', 'forced_close')),
   violations INTEGER DEFAULT 0,
-  last_ping TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_ping TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(student_id, exam_id)
 );
 

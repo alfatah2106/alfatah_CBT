@@ -82,6 +82,15 @@ export default function Exam() {
     return () => clearInterval(timer);
   }, [currentExam, currentSession, user, role, navigate]);
 
+  // 4. Ping Session
+  useEffect(() => {
+    if (!currentSession?.id) return;
+    const pingInterval = setInterval(() => {
+      api.pingSession(currentSession.id).catch(console.error);
+    }, 30000); // Ping every 30 seconds
+    return () => clearInterval(pingInterval);
+  }, [currentSession]);
+
   const handleAnswer = async (answerText: string) => {
     const q = questions[activeQuestionIndex];
     if (!q) return;
@@ -93,7 +102,14 @@ export default function Exam() {
     }
   };
 
-  const handleConfirmFinish = () => {
+  const handleConfirmFinish = async () => {
+    if (currentSession?.id) {
+      try {
+        await api.finishExam(currentSession.id);
+      } catch (err) {
+        console.error('Finish failed', err);
+      }
+    }
     logout();
     navigate('/');
   };

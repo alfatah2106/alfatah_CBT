@@ -213,6 +213,26 @@ export const api = {
     });
     return res.json();
   },
+  finishExam: async (sessionId: number) => {
+    if (USE_MOCK) {
+      const session = mockSessions.find(s => s.id === sessionId);
+      if (session) session.status = 'finished';
+      return { success: true };
+    }
+    const res = await fetchWithHeaders(`${API_URL}/student/finish`, {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    });
+    return res.json();
+  },
+  pingSession: async (sessionId: number) => {
+    if (USE_MOCK) return { success: true };
+    const res = await fetchWithHeaders(`${API_URL}/student/ping`, {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    });
+    return res.json();
+  },
   
   // Proctor
   getProctorExams: async () => {
