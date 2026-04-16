@@ -101,6 +101,16 @@ app.post('/api/admin/users', async (c) => {
   return c.json({ success: true });
 });
 
+app.post('/api/admin/users/bulk', async (c) => {
+  const body = await c.req.json();
+  const users = body.users;
+  const pool = getDb(c.env);
+  for (const u of users) {
+    await pool.query('INSERT INTO users (username, password, role) VALUES ($1, $2, $3) ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUDED.role', [u.username, u.password, u.role]);
+  }
+  return c.json({ success: true, count: users.length });
+});
+
 app.put('/api/admin/users/:id', async (c) => {
   const id = c.req.param('id');
   const { username, password, role } = await c.req.json();
@@ -147,6 +157,16 @@ app.post('/api/admin/subjects', async (c) => {
   const pool = getDb(c.env);
   await pool.query('INSERT INTO subjects (name) VALUES ($1)', [name]);
   return c.json({ success: true });
+});
+
+app.post('/api/admin/subjects/bulk', async (c) => {
+  const body = await c.req.json();
+  const subjects = body.subjects;
+  const pool = getDb(c.env);
+  for (const s of subjects) {
+    await pool.query('INSERT INTO subjects (name) VALUES ($1)', [s.name]);
+  }
+  return c.json({ success: true, count: subjects.length });
 });
 
 app.put('/api/admin/subjects/:id', async (c) => {
@@ -204,6 +224,24 @@ app.post('/api/admin/exams/:examId/questions', async (c) => {
     await pool.query('INSERT INTO questions (exam_id, number, type, answer_key, weight) VALUES ($1, $2, $3, $4, $5)', [examId, number, type, answer_key, weight || 1]);
   }
   return c.json({ success: true });
+});
+
+app.post('/api/admin/exams/:examId/questions/bulk', async (c) => {
+  const examId = c.req.param('examId');
+  const body = await c.req.json();
+  const questions = body.questions;
+  const pool = getDb(c.env);
+  try { await pool.query('ALTER TABLE questions ADD COLUMN IF NOT EXISTS weight INTEGER DEFAULT 1'); } catch (e) {}
+  
+  for (const q of questions) {
+    const { rows } = await pool.query('SELECT id FROM questions WHERE exam_id = $1 AND number = $2', [examId, q.number]);
+    if (rows.length > 0) {
+      await pool.query('UPDATE questions SET type = $1, answer_key = $2, weight = $3 WHERE id = $4', [q.type, q.answer_key, q.weight || 1, rows[0].id]);
+    } else {
+      await pool.query('INSERT INTO questions (exam_id, number, type, answer_key, weight) VALUES ($1, $2, $3, $4, $5)', [examId, q.number, q.type, q.answer_key, q.weight || 1]);
+    }
+  }
+  return c.json({ success: true, count: questions.length });
 });
 
 app.delete('/api/admin/questions/:id', async (c) => {

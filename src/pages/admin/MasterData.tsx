@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Upload, Plus, Save, Edit, Trash2, Settings, FileText } from 'lucide-react';
 import Papa from 'papaparse';
 import { api } from '@/lib/api';
+import { BulkInputModal } from '@/components/BulkInputModal';
 
 export default function MasterData() {
   return (
@@ -110,6 +111,19 @@ function StudentManager() {
           <CardDescription>Daftar murid yang terdaftar dalam sistem.</CardDescription>
         </div>
         <div className="flex gap-2">
+          <BulkInputModal 
+            title="Input Masal Data Murid"
+            description="Copy data dari Excel/Spreadsheet dan paste di bawah. Pastikan urutan kolom sesuai."
+            columns={[
+              { key: 'id', label: 'ID Murid (NIS)' },
+              { key: 'name', label: 'Nama Lengkap' },
+              { key: 'class', label: 'Kelas' }
+            ]}
+            onSave={async (data) => {
+              await api.bulkUploadStudents(data);
+              loadStudents();
+            }}
+          />
           <div className="relative">
             <Input 
               type="file" 
@@ -245,8 +259,19 @@ function SubjectManager() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Daftar Mata Pelajaran</CardTitle>
+          <BulkInputModal 
+            title="Input Masal Mata Pelajaran"
+            description="Copy data dari Excel/Spreadsheet dan paste di bawah. Pastikan urutan kolom sesuai."
+            columns={[
+              { key: 'name', label: 'Nama Mata Pelajaran' }
+            ]}
+            onSave={async (data) => {
+              await api.bulkUploadSubjects(data);
+              loadSubjects();
+            }}
+          />
         </CardHeader>
         <CardContent>
           <Table>
@@ -557,7 +582,29 @@ function ExamManager() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
             <div className="md:col-span-1 space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200 h-fit">
-              <h3 className="font-medium text-slate-900">Tambah/Edit Soal</h3>
+              <div className="flex justify-between items-center">
+                <h3 className="font-medium text-slate-900">Tambah/Edit Soal</h3>
+                <BulkInputModal 
+                  title="Input Masal Soal & Kunci"
+                  description="Copy data dari Excel/Spreadsheet dan paste di bawah. Pastikan urutan kolom sesuai."
+                  buttonText="Input Masal"
+                  columns={[
+                    { key: 'number', label: 'Nomor Soal' },
+                    { key: 'type', label: 'Tipe (PG/ESSAY)' },
+                    { key: 'answer_key', label: 'Kunci Jawaban' },
+                    { key: 'weight', label: 'Bobot Nilai' }
+                  ]}
+                  onSave={async (data) => {
+                    const formattedData = data.map(d => ({
+                      ...d,
+                      number: parseInt(d.number),
+                      weight: parseInt(d.weight) || 1
+                    }));
+                    await api.bulkUploadQuestions(managingQuestionsFor.id, formattedData);
+                    loadQuestions(managingQuestionsFor.id);
+                  }}
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Nomor Soal</Label>
                 <Input type="number" value={newQuestion.number} onChange={e => setNewQuestion({...newQuestion, number: parseInt(e.target.value)})} />
@@ -711,8 +758,21 @@ function UserManager() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Daftar Petugas</CardTitle>
+          <BulkInputModal 
+            title="Input Masal Petugas"
+            description="Copy data dari Excel/Spreadsheet dan paste di bawah. Pastikan urutan kolom sesuai."
+            columns={[
+              { key: 'username', label: 'Username' },
+              { key: 'password', label: 'Password' },
+              { key: 'role', label: 'Peran (admin/proctor/grader)' }
+            ]}
+            onSave={async (data) => {
+              await api.bulkUploadUsers(data);
+              loadUsers();
+            }}
+          />
         </CardHeader>
         <CardContent>
           <Table>

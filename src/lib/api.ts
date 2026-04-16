@@ -63,6 +63,13 @@ export const api = {
     });
     return res.json();
   },
+  bulkUploadUsers: async (users: any[]) => {
+    const res = await fetchWithHeaders(`${API_URL}/admin/users/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ users }),
+    });
+    return res.json();
+  },
   updateUser: async (id: string, data: any) => {
     const res = await fetchWithHeaders(`${API_URL}/admin/users/${id}`, {
       method: 'PUT',
@@ -135,6 +142,13 @@ export const api = {
     });
     return res.json();
   },
+  bulkUploadSubjects: async (subjects: any[]) => {
+    const res = await fetchWithHeaders(`${API_URL}/admin/subjects/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ subjects }),
+    });
+    return res.json();
+  },
   updateSubject: async (id: number, name: string) => {
     const res = await fetchWithHeaders(`${API_URL}/admin/subjects/${id}`, {
       method: 'PUT',
@@ -154,6 +168,13 @@ export const api = {
     const res = await fetchWithHeaders(`${API_URL}/admin/exams/${examId}/questions`, {
       method: 'POST',
       body: JSON.stringify(question),
+    });
+    return res.json();
+  },
+  bulkUploadQuestions: async (examId: number, questions: any[]) => {
+    const res = await fetchWithHeaders(`${API_URL}/admin/exams/${examId}/questions/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ questions }),
     });
     return res.json();
   },
