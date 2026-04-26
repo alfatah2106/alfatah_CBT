@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
-import { Badge } from '@/components/ui/badge'; // Asumsi ada komponen badge
+import { Badge } from '@/components/ui/badge';
+import { Download } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportExcel';
 
 export default function GraderDashboard() {
   const [exams, setExams] = useState<any[]>([]);
@@ -43,51 +46,147 @@ export default function GraderDashboard() {
     setIsModalOpen(true);
   };
 
+  const handleDownloadExcel = () => {
+    if (students.length === 0) return;
+    
+    const dataToExport = students.map(s => ({
+      'ID Murid': s.student_id,
+      'Nama Murid': s.student_name,
+      'Kelas': s.class,
+      'Total Nilai': s.total_score,
+      'Koreksi Selesai': s.is_graded ? 'Ya' : 'Belum'
+    }));
+
+    const selectedExam = exams.find(e => e.id.toString() === selectedExamId);
+    const examName = selectedExam ? selectedExam.title.replace(/[^a-zA-Z0-9]/g, '_') : selectedExamId;
+    exportToExcel(dataToExport, `Nilai_${examName}`);
+  };
+
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-900">Koreksi Jawaban Siswa</h1>
-        <Select value={selectedExamId} onValueChange={setSelectedExamId}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Pilih Pelajaran/Ujian" />
-          </SelectTrigger>
-          <SelectContent>
-            {exams.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.title}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Panel Korektor</h1>
+          <p className="text-slate-500 mt-1">Koreksi essay dan unduh laporan nilai ujian.</p>
+        </div>
       </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nama Siswa</TableHead>
-              <TableHead>Kelas</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.map((s) => (
-              <TableRow key={s.student_id}>
-                <TableCell className="font-medium">{s.student_name}</TableCell>
-                <TableCell>{s.class}</TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={s.is_graded ? "default" : "outline"}
-                    className={s.is_graded ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200" : ""}
-                  >
-                    {s.is_graded ? "Selesai" : "Perlu Koreksi"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button onClick={() => handleOpenKoreksi(s)}>Koreksi</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      <Tabs defaultValue="koreksi" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-sm mb-6">
+          <TabsTrigger value="koreksi">Koreksi Jawaban</TabsTrigger>
+          <TabsTrigger value="laporan">Laporan Nilai</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="koreksi" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between border-b pb-4 mb-4">
+              <div>
+                <CardTitle>Filter Ujian</CardTitle>
+                <CardDescription>Pilih ujian untuk melihat daftar siswa.</CardDescription>
+              </div>
+              <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Pilih Pelajaran/Ujian" />
+                </SelectTrigger>
+                <SelectContent>
+                  {exams.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama Siswa</TableHead>
+                    <TableHead>Kelas</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {students.map((s) => (
+                    <TableRow key={s.student_id}>
+                      <TableCell className="font-medium">{s.student_name}</TableCell>
+                      <TableCell>{s.class}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={s.is_graded ? "default" : "outline"}
+                          className={s.is_graded ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200" : ""}
+                        >
+                          {s.is_graded ? "Selesai" : "Perlu Koreksi"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button onClick={() => handleOpenKoreksi(s)}>Koreksi</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {students.length === 0 && selectedExamId && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-slate-500 py-4">Belum ada siswa di ujian ini</TableCell></TableRow>
+                  )}
+                  {students.length === 0 && !selectedExamId && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-slate-500 py-4">Pilih ujian terlebih dahulu</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="laporan" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Laporan Nilai Ujian</CardTitle>
+              <CardDescription>Pilih ujian dan unduh rekapitulasi nilai akhir siswa.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-4 items-center mb-6">
+              <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Pilih Pelajaran/Ujian" />
+                </SelectTrigger>
+                <SelectContent>
+                  {exams.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="outline" 
+                onClick={handleDownloadExcel} 
+                disabled={students.length === 0 || !selectedExamId}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Unduh Excel
+              </Button>
+            </CardContent>
+            
+            {selectedExamId && (
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama Siswa</TableHead>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead className="text-right">Total Nilai</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {students.map((s) => (
+                      <TableRow key={s.student_id}>
+                        <TableCell className="font-medium">{s.student_name}</TableCell>
+                        <TableCell>{s.class}</TableCell>
+                        <TableCell className="text-right font-bold text-blue-600">{s.total_score}</TableCell>
+                      </TableRow>
+                    ))}
+                    {students.length === 0 && (
+                      <TableRow><TableCell colSpan={3} className="text-center text-slate-500 py-4">Belum ada data nilai</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Modal Detail Jawaban */}
       {selectedStudent && (

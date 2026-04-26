@@ -71,7 +71,7 @@ export default function StudentLogin() {
                 value={examCode}
                 onChange={(e) => setExamCode(e.target.value)}
                 required
-                className="h-12 uppercase"
+                className="h-12"
               />
             </div>
           </CardContent>

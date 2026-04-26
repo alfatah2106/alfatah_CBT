@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { api } from '@/lib/api';
-import Papa from 'papaparse';
+import { exportToExcel } from '@/lib/exportExcel';
 
 export default function Reports() {
   const [exams, setExams] = useState<any[]>([]);
@@ -43,18 +43,21 @@ export default function Reports() {
     setLoading(false);
   };
 
-  const handleDownloadCSV = () => {
+  const handleDownloadExcel = () => {
     if (reports.length === 0) return;
-    const csv = Papa.unparse(reports);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Nilai_Ujian_${selectedExamId}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    
+    // Siapkan data untuk diexport
+    const dataToExport = reports.map(r => ({
+      'ID Murid': r.student_id,
+      'Nama Murid': r.student_name,
+      'Kelas': r.class,
+      'Total Nilai': r.total_score,
+      'Koreksi Selesai': r.is_graded ? 'Ya' : 'Belum'
+    }));
+
+    const selectedExam = exams.find(e => e.id.toString() === selectedExamId);
+    const examName = selectedExam ? selectedExam.title.replace(/[^a-zA-Z0-9]/g, '_') : selectedExamId;
+    exportToExcel(dataToExport, `Nilai_${examName}`);
   };
 
   return (
@@ -82,12 +85,12 @@ export default function Reports() {
           </Select>
           <Button 
             variant="outline" 
-            onClick={handleDownloadCSV} 
+            onClick={handleDownloadExcel} 
             disabled={reports.length === 0}
             className="flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
-            Unduh CSV
+            Unduh Excel
           </Button>
         </CardContent>
       </Card>
