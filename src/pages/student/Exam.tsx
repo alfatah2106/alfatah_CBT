@@ -101,19 +101,35 @@ export default function Exam() {
     return () => clearInterval(pingInterval);
   }, [currentSession, logout, navigate]);
 
-  const handleAnswer = async (answerText: string) => {
+  const saveCurrentAnswer = async () => {
+    if (!currentSession?.id) return;
+    const q = questions[activeQuestionIndex];
+    if (!q) return;
+    const currentAnswer = answers[q.id];
+    if (currentAnswer !== undefined && currentAnswer !== '') {
+      try {
+        await api.submitAnswer(currentSession.id, q.id, currentAnswer);
+      } catch (err) {
+        console.error('Save failed', err);
+      }
+    }
+  };
+
+  const changeQuestion = (newIndex: number) => {
+    if (newIndex === activeQuestionIndex) return;
+    saveCurrentAnswer();
+    setActiveQuestionIndex(newIndex);
+  };
+
+  const handleAnswer = (answerText: string) => {
     const q = questions[activeQuestionIndex];
     if (!q) return;
     setAnswers(prev => ({ ...prev, [q.id]: answerText }));
-    try {
-      await api.submitAnswer(currentSession.id, q.id, answerText);
-    } catch (err) {
-      console.error('Save failed', err);
-    }
   };
 
   const handleConfirmFinish = async () => {
     if (currentSession?.id) {
+      await saveCurrentAnswer();
       try {
         await api.finishExam(currentSession.id);
       } catch (err) {
@@ -177,7 +193,7 @@ export default function Exam() {
                   return (
                     <button
                       key={q.id}
-                      onClick={() => setActiveQuestionIndex(idx)}
+                      onClick={() => changeQuestion(idx)}
                       className={`h-12 w-12 rounded-lg text-sm font-bold transition-all flex items-center justify-center border-2
                         ${isActive ? 'border-blue-600 ring-4 ring-blue-50 z-10' : ''}
                         ${isAnswered ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'}`}
@@ -234,8 +250,8 @@ export default function Exam() {
 
                 {/* Footer Navigasi */}
                 <div className="p-6 border-t border-slate-100 bg-white grid grid-cols-2 gap-3 shrink-0">
-                  <Button variant="outline" className="h-12 font-bold" onClick={() => setActiveQuestionIndex(prev => Math.max(0, prev - 1))} disabled={activeQuestionIndex === 0}>KEMBALI</Button>
-                  <Button className="h-12 font-bold bg-slate-900" onClick={() => setActiveQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))} disabled={activeQuestionIndex === questions.length - 1}>LANJUT</Button>
+                  <Button variant="outline" className="h-12 font-bold" onClick={() => changeQuestion(Math.max(0, activeQuestionIndex - 1))} disabled={activeQuestionIndex === 0}>KEMBALI</Button>
+                  <Button className="h-12 font-bold bg-slate-900" onClick={() => changeQuestion(Math.min(questions.length - 1, activeQuestionIndex + 1))} disabled={activeQuestionIndex === questions.length - 1}>LANJUT</Button>
                 </div>
               </div>
             ) : (
