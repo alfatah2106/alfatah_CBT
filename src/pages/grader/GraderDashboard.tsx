@@ -271,7 +271,7 @@ function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
                     </div>
                   </div>
                   <p className="text-xs text-slate-500">Kunci: {a.answer_key}</p>
-                  <div className="p-3 bg-white border rounded text-sm italic">
+                  <div className="p-3 bg-white border rounded text-sm italic whitespace-pre-wrap">
                     {a.answer_text || "Tidak menjawab"}
                   </div>
                 </div>

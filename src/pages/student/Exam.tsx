@@ -162,6 +162,10 @@ export default function Exam() {
     handleVirtualKeyPress(' ');
   };
 
+  const handleVirtualEnter = () => {
+    handleVirtualKeyPress('\n');
+  };
+
   const handleConfirmFinish = async () => {
     if (currentSession?.id) {
       await saveCurrentAnswer();
@@ -333,7 +337,7 @@ export default function Exam() {
                       </span>
                     </div>
                     {isAnswered ? (
-                      <div className="text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 italic break-words">
+                      <div className="text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 italic break-words whitespace-pre-wrap">
                         {q.type === 'PG' ? `Jawaban: ${ans}` : ans}
                       </div>
                     ) : (
@@ -374,6 +378,7 @@ export default function Exam() {
           onKeyPress={handleVirtualKeyPress}
           onBackspace={handleVirtualBackspace}
           onSpace={handleVirtualSpace}
+          onEnter={handleVirtualEnter}
           onClose={() => setShowKeyboard(false)}
         />
       )}
