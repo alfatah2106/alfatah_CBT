@@ -278,7 +278,7 @@ app.get('/api/admin/exams/:examId/students/:studentId/answers', async (c) => {
   const pool = getDb(c.env);
   
   const { rows } = await pool.query(`
-    SELECT a.id, a.answer_text, a.score, q.number, q.type, q.answer_key, q.weight,
+    SELECT a.id, a.question_id, a.answer_text, a.score, q.number, q.type, q.answer_key, q.weight,
            (a.answer_text = q.answer_key) as is_correct
     FROM answers a
     JOIN sessions s ON a.session_id = s.id

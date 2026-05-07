@@ -5,8 +5,9 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Clock, AlertCircle } from 'lucide-react';
+import { Clock, AlertCircle, ZoomIn, ZoomOut, Maximize, Keyboard } from 'lucide-react';
 import { useLockdown } from '@/lib/useLockdown';
+import { ArabicKeyboard } from '@/components/ArabicKeyboard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,8 @@ export default function Exam() {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [showKeyboard, setShowKeyboard] = useState(false);
   
   // State Dialog
   const [showFinishDialog, setShowFinishDialog] = useState(false);
@@ -58,8 +61,22 @@ export default function Exam() {
       return;
     }
 
-    api.getQuestions(currentExam.id).then(data => {
-      setQuestions(data);
+    // Load questions and previous answers
+    Promise.all([
+      api.getQuestions(currentExam.id),
+      api.getAnswersByStudent(currentExam.id.toString(), currentSession?.student_id || '')
+    ]).then(([questionsData, answersData]) => {
+      setQuestions(questionsData);
+      
+      const answersMap: Record<number, string> = {};
+      if (Array.isArray(answersData)) {
+        answersData.forEach((a: any) => {
+          if (a.question_id) {
+            answersMap[a.question_id] = a.answer_text;
+          }
+        });
+        setAnswers(answersMap);
+      }
     });
 
     const durationInMs = (currentExam.duration_minutes || 0) * 60000;
@@ -127,6 +144,24 @@ export default function Exam() {
     setAnswers(prev => ({ ...prev, [q.id]: answerText }));
   };
 
+  const handleVirtualKeyPress = (key: string) => {
+    const q = questions[activeQuestionIndex];
+    if (!q || q.type !== 'ESSAY') return;
+    const currentAns = answers[q.id] || '';
+    setAnswers(prev => ({ ...prev, [q.id]: currentAns + key }));
+  };
+
+  const handleVirtualBackspace = () => {
+    const q = questions[activeQuestionIndex];
+    if (!q || q.type !== 'ESSAY') return;
+    const currentAns = answers[q.id] || '';
+    setAnswers(prev => ({ ...prev, [q.id]: currentAns.slice(0, -1) }));
+  };
+
+  const handleVirtualSpace = () => {
+    handleVirtualKeyPress(' ');
+  };
+
   const handleConfirmFinish = async () => {
     if (currentSession?.id) {
       await saveCurrentAnswer();
@@ -173,10 +208,25 @@ export default function Exam() {
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* PDF Viewer */}
-        <div className="flex-1 p-4 bg-slate-200/50">
-          <div className="bg-white rounded-xl shadow-md border border-slate-300 h-full overflow-hidden flex flex-col">
-            <div className="bg-slate-800 text-white px-4 py-2 text-xs font-bold uppercase shrink-0">Naskah Soal</div>
-            <iframe src={`${currentExam.pdf_url}#toolbar=0`} className="w-full flex-1 border-0" title="Soal" />
+        <div className="flex-1 p-4 bg-slate-200/50 flex flex-col min-h-0">
+          <div className="bg-white rounded-xl shadow-md border border-slate-300 h-full flex flex-col overflow-hidden">
+            <div className="bg-slate-800 text-white px-4 py-2 text-xs font-bold uppercase shrink-0 flex justify-between items-center z-10 relative">
+              <span>Naskah Soal</span>
+              <div className="flex items-center gap-1 bg-slate-700/50 rounded-lg p-1">
+                <button onClick={() => setZoom(z => Math.max(0.5, z - 0.25))} className="p-1 hover:bg-slate-600 rounded transition-colors" title="Zoom Out"><ZoomOut className="w-4 h-4" /></button>
+                <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZoom(z => Math.min(3, z + 0.25))} className="p-1 hover:bg-slate-600 rounded transition-colors" title="Zoom In"><ZoomIn className="w-4 h-4" /></button>
+                <div className="w-px h-4 bg-slate-600 mx-1"></div>
+                <button onClick={() => setZoom(1)} className="p-1 hover:bg-slate-600 rounded transition-colors" title="Reset Zoom"><Maximize className="w-4 h-4" /></button>
+                <div className="w-px h-4 bg-slate-600 mx-1"></div>
+                <button onClick={() => setShowKeyboard(!showKeyboard)} className={`p-1 rounded transition-colors ${showKeyboard ? 'bg-blue-600 text-white' : 'hover:bg-slate-600'}`} title="Tampilkan Keyboard Virtual"><Keyboard className="w-4 h-4" /></button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-slate-300 relative">
+              <div style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%`, minWidth: '100%', minHeight: '100%' }} className="transition-all duration-200 ease-out origin-top-left">
+                <iframe src={`${currentExam.pdf_url}#toolbar=0`} className="w-full h-full border-0 shadow-lg" title="Soal" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -263,14 +313,43 @@ export default function Exam() {
 
       {/* Dialogs */}
       <AlertDialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Selesaikan Ujian?</AlertDialogTitle>
-            <AlertDialogDescription>Semua jawaban akan dikirim. Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+        <AlertDialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+          <AlertDialogHeader className="px-6 py-4 border-b border-slate-100 shrink-0">
+            <AlertDialogTitle className="text-2xl font-bold">Preview Jawaban</AlertDialogTitle>
+            <AlertDialogDescription>Pastikan semua jawaban Anda sudah benar sebelum mengakhiri ujian.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmFinish} className="bg-rose-600 hover:bg-rose-700">Ya, Selesai</AlertDialogAction>
+          
+          <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar bg-slate-50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {questions.map((q) => {
+                const ans = answers[q.id];
+                const isAnswered = ans !== undefined && ans !== '';
+                return (
+                  <div key={q.id} className={`p-4 rounded-xl border ${isAnswered ? 'bg-white border-slate-200' : 'bg-rose-50 border-rose-200'}`}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-slate-700">Soal No. {q.number}</span>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${isAnswered ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                        {isAnswered ? 'Terjawab' : 'Kosong'}
+                      </span>
+                    </div>
+                    {isAnswered ? (
+                      <div className="text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 italic break-words">
+                        {q.type === 'PG' ? `Jawaban: ${ans}` : ans}
+                      </div>
+                    ) : (
+                      <div className="text-rose-500 text-sm italic">Belum ada jawaban.</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <AlertDialogFooter className="px-6 py-4 border-t border-slate-100 bg-white shrink-0">
+            <AlertDialogCancel className="mt-0">Kembali Mengerjakan</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmFinish} className="bg-rose-600 hover:bg-rose-700 font-bold">
+              Simpan dan Selesai
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -289,6 +368,15 @@ export default function Exam() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showKeyboard && (
+        <ArabicKeyboard 
+          onKeyPress={handleVirtualKeyPress}
+          onBackspace={handleVirtualBackspace}
+          onSpace={handleVirtualSpace}
+          onClose={() => setShowKeyboard(false)}
+        />
+      )}
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
