@@ -33,11 +33,11 @@ export default function MasterData() {
         </TabsContent>
         
         <TabsContent value="subjects" className="mt-6">
-          <SubjectManager />
+          <ExternalSystemCard title="Manajemen Mata Pelajaran" description="Mata pelajaran sekarang dikelola melalui sistem terpisah yang lebih canggih." />
         </TabsContent>
         
         <TabsContent value="exams" className="mt-6">
-          <ExamManager />
+          <ExternalSystemCard title="Manajemen Ujian & Soal" description="Manajemen ujian, upload PDF, dan pengaturan soal dikelola di sistem terpisah." />
         </TabsContent>
 
         <TabsContent value="users" className="mt-6">
@@ -45,6 +45,26 @@ export default function MasterData() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function ExternalSystemCard({ title, description }: { title: string, description: string }) {
+  return (
+    <Card className="max-w-2xl mx-auto mt-12 border-blue-200">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl text-blue-800">{title}</CardTitle>
+        <CardDescription className="text-lg">{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex justify-center p-8">
+        <Button 
+          size="lg" 
+          onClick={() => window.open('https://input-soal-cbt.miqdad-alfatah.workers.dev/', '_blank')} 
+          className="bg-blue-600 hover:bg-blue-700 text-lg px-8 h-16 w-full shadow-lg"
+        >
+          Buka Pengaturan di input-soal-cbt
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

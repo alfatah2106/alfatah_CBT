@@ -39,7 +39,18 @@ export default function ProctorDashboard() {
   const loadSessions = async () => {
     if (!selectedExamId) return;
     try {
-      const data = await api.getSessions(selectedExamId);
+      let data = await api.getSessions(selectedExamId);
+      data.sort((a: any, b: any) => {
+        const classA = String(a.student_class || '').toLowerCase();
+        const classB = String(b.student_class || '').toLowerCase();
+        if (classA < classB) return -1;
+        if (classA > classB) return 1;
+        const nameA = String(a.student_name || '').toLowerCase();
+        const nameB = String(b.student_name || '').toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+      });
       setSessions(data);
     } catch (error) {
       console.error(error);

@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Clock, AlertCircle, ZoomIn, ZoomOut, Maximize, Keyboard } from 'lucide-react';
+import { Clock, AlertCircle, ZoomIn, ZoomOut, Maximize, Keyboard, Wifi, WifiOff } from 'lucide-react';
 import { useLockdown } from '@/lib/useLockdown';
 import { ArabicKeyboard } from '@/components/ArabicKeyboard';
 import {
@@ -38,6 +38,20 @@ export default function Exam() {
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [showBlurWarning, setShowBlurWarning] = useState(false);
   const [blurCount, setBlurCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // 2. Deteksi Pindah Tab (Anti-Blur)
   useEffect(() => {
@@ -200,6 +214,17 @@ export default function Exam() {
           </div>
         </div>
         <div className="flex items-center gap-6">
+          <div className="flex items-center">
+            {isOnline ? (
+              <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-xs font-bold border border-emerald-200">
+                <Wifi className="w-4 h-4" /> <span className="hidden sm:inline">Online</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-rose-600 bg-rose-50 px-3 py-1 rounded-full text-xs font-bold border border-rose-200 animate-pulse">
+                <WifiOff className="w-4 h-4" /> <span className="hidden sm:inline">Koneksi Terputus</span>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2 text-rose-600 font-mono text-2xl font-bold bg-rose-50 px-4 py-1 rounded-lg border border-rose-200">
             <Clock className="w-6 h-6" />
             {formatTime(timeLeft)}

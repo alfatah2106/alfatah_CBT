@@ -35,7 +35,18 @@ export default function GraderDashboard() {
 
   const loadStudentList = async (examId: number) => {
     // Mengambil data laporan/rekap sebagai basis daftar siswa
-    const data = await api.getReports(examId);
+    let data = await api.getReports(examId);
+    data.sort((a: any, b: any) => {
+      const classA = String(a.class || '').toLowerCase();
+      const classB = String(b.class || '').toLowerCase();
+      if (classA < classB) return -1;
+      if (classA > classB) return 1;
+      const nameA = String(a.student_name || '').toLowerCase();
+      const nameB = String(b.student_name || '').toLowerCase();
+      if (nameA < nameB) return -1;
+      if (nameA > nameB) return 1;
+      return 0;
+    });
     setStudents(data);
   };
 

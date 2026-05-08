@@ -1,9 +1,15 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Database, FileBarChart, LogOut } from 'lucide-react';
+import { useAuthStore } from '@/lib/store';
 
 export default function AdminLayout() {
   const location = useLocation();
+  const { role, logout } = useAuthStore();
   
+  if (role !== 'admin') {
+    return <Navigate to="/staff/login" replace />;
+  }
+
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard className="w-5 h-5" /> },
     { name: 'Data Master', path: '/admin/master', icon: <Database className="w-5 h-5" /> },
@@ -38,7 +44,7 @@ export default function AdminLayout() {
           })}
         </nav>
         <div className="p-4 border-t border-slate-200">
-          <Link to="/" className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+          <Link to="/" onClick={logout} className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
             <LogOut className="w-5 h-5" />
             Keluar
           </Link>

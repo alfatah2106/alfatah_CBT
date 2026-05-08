@@ -267,7 +267,7 @@ app.get('/api/admin/reports/:examId', async (c) => {
     LEFT JOIN answers a ON s.id = a.session_id
     WHERE s.exam_id = $1
     GROUP BY st.id, st.name, st.class, s.id, s.exam_id
-    ORDER BY st.name
+    ORDER BY st.class, st.name
   `, [examId]);
   return c.json(rows);
 });
@@ -401,10 +401,11 @@ app.get('/api/proctor/sessions/:examId', async (c) => {
   const examId = c.req.param('examId');
   const pool = getDb(c.env);
   const { rows } = await pool.query(`
-    SELECT s.*, st.name as student_name 
+    SELECT s.*, st.name as student_name, st.class as student_class
     FROM sessions s 
     JOIN students st ON s.student_id = st.id 
     WHERE s.exam_id = $1
+    ORDER BY st.class, st.name
   `, [examId]);
   return c.json(rows);
 });
