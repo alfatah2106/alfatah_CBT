@@ -3,6 +3,23 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body, html {
+    background: white !important;
+  }
+}
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

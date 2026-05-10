@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
-import { ShieldAlert, Wifi, WifiOff, Play, Square } from 'lucide-react';
+import { ShieldAlert, Wifi, WifiOff, Play, Square, Search } from 'lucide-react';
 
 export default function ProctorDashboard() {
   const [exams, setExams] = useState<any[]>([]);
+  const [searchExamQuery, setSearchExamQuery] = useState('');
   const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,9 +93,20 @@ export default function ProctorDashboard() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Daftar Ujian</CardTitle>
-            <CardDescription>Aktifkan atau nonaktifkan ujian agar murid bisa login.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Daftar Ujian</CardTitle>
+              <CardDescription>Aktifkan atau nonaktifkan ujian agar murid bisa login.</CardDescription>
+            </div>
+            <div className="relative w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+              <Input 
+                placeholder="Cari judul ujian..." 
+                className="pl-9"
+                value={searchExamQuery}
+                onChange={(e) => setSearchExamQuery(e.target.value)}
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -106,10 +119,10 @@ export default function ProctorDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {exams.length === 0 ? (
+                {exams.filter(e => e.title.toLowerCase().includes(searchExamQuery.toLowerCase()) || e.code?.toLowerCase().includes(searchExamQuery.toLowerCase())).length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center text-slate-500">Belum ada ujian</TableCell></TableRow>
                 ) : (
-                  exams.map((e) => (
+                  exams.filter(e => e.title.toLowerCase().includes(searchExamQuery.toLowerCase()) || e.code?.toLowerCase().includes(searchExamQuery.toLowerCase())).map((e) => (
                     <TableRow key={e.id} className={selectedExamId === e.id ? 'bg-slate-50' : ''}>
                       <TableCell className="font-medium">{e.code}</TableCell>
                       <TableCell>{e.title}</TableCell>

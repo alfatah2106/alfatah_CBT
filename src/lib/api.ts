@@ -301,6 +301,11 @@ export const api = {
     const res = await fetch(`${API_URL}/admin/exams/${examId}/students/${studentId}/answers`);
     return res.json();
   },
+  getAllAnswers: async (examId: string) => {
+    if (USE_MOCK) return [];
+    const res = await fetch(`${API_URL}/grader/answers/${examId}`);
+    return res.json();
+  },
   submitScore: async (answerId: number, score: number) => {
     if (USE_MOCK) {
       const answer = mockAnswers.find(a => a.id === answerId);

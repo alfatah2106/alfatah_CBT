@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
-import { Download } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportExcel';
 
 export default function GraderDashboard() {
@@ -17,6 +17,8 @@ export default function GraderDashboard() {
   const [students, setStudents] = useState<any[]>([]); // List siswa yang ikut ujian
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printData, setPrintData] = useState<any>(null);
 
   useEffect(() => {
     loadExams();
@@ -73,8 +75,42 @@ export default function GraderDashboard() {
     exportToExcel(dataToExport, `Nilai_${examName}`);
   };
 
+  const handlePrintPdf = async () => {
+    if (!selectedExamId || students.length === 0) return;
+    setIsPrinting(true);
+    try {
+      const allAnswers = await api.getAllAnswers(selectedExamId);
+      
+      const grouped: { [key: string]: any[] } = {};
+      allAnswers.forEach((ans: any) => {
+        if (!grouped[ans.student_id]) grouped[ans.student_id] = [];
+        grouped[ans.student_id].push(ans);
+      });
+
+      const studentAnswers = students.map(s => ({
+        ...s,
+        answers: grouped[s.student_id] || []
+      }));
+
+      const exam = exams.find(e => e.id.toString() === selectedExamId);
+      setPrintData({ exam, students: studentAnswers });
+
+      setTimeout(() => {
+        const oldTitle = document.title;
+        document.title = `lembar jawab ujian (${exam?.title || selectedExamId})`;
+        window.print();
+        document.title = oldTitle;
+        setIsPrinting(false);
+      }, 1000);
+    } catch (e) {
+      console.error(e);
+      setIsPrinting(false);
+    }
+  };
+
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-6">
+    <>
+    <div className="p-8 max-w-6xl mx-auto space-y-6 no-print">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Panel Korektor</h1>
@@ -95,14 +131,27 @@ export default function GraderDashboard() {
                 <CardTitle>Filter Ujian</CardTitle>
                 <CardDescription>Pilih ujian untuk melihat daftar siswa.</CardDescription>
               </div>
-              <Select value={selectedExamId} onValueChange={setSelectedExamId}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Pilih Pelajaran/Ujian" />
-                </SelectTrigger>
-                <SelectContent>
-                  {exams.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-4 items-center">
+                <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Pilih Pelajaran/Ujian" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {exams.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {selectedExamId && (
+                  <Button 
+                    variant="outline" 
+                    className="flex gap-2 items-center text-blue-600 border-blue-200 hover:bg-blue-50"
+                    onClick={handlePrintPdf}
+                    disabled={isPrinting}
+                  >
+                    <Printer className="w-4 h-4" />
+                    {isPrinting ? "Menyiapkan PDF..." : "Unduh Bulk PDF"}
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -209,6 +258,63 @@ export default function GraderDashboard() {
         />
       )}
     </div>
+
+    {isPrinting && printData && (
+      <div className="print-only fixed top-0 left-0 w-full bg-white z-[9999] text-black">
+        {printData.students.map((student: any) => (
+          <div key={student.student_id} className="p-8 page-break" style={{ pageBreakAfter: 'always' }}>
+              <h2 className="text-2xl font-bold mb-1">Lembar Jawab Ujian</h2>
+              <p className="mb-4 text-black font-semibold">Judul Ujian: {printData.exam?.title}</p>
+              <table className="mb-6">
+                 <tbody>
+                   <tr><td className="font-semibold pr-4">Nama</td><td>: {student.student_name}</td></tr>
+                   <tr><td className="font-semibold pr-4">Kelas</td><td>: {student.class}</td></tr>
+                   <tr><td className="font-semibold pr-4">Total Nilai</td><td>: {student.total_score}</td></tr>
+                 </tbody>
+              </table>
+              
+              <h3 className="font-bold text-lg mb-2">I. Pilihan Ganda</h3>
+              <table className="w-full border-collapse border border-black mb-6 text-sm">
+                  <thead>
+                      <tr>
+                          <th className="border border-black p-2 text-left w-12">No</th>
+                          <th className="border border-black p-2 text-left">Jawaban Siswa</th>
+                          <th className="border border-black p-2 text-left">Kunci</th>
+                          <th className="border border-black p-2 text-right">Skor</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {student.answers.filter((a: any) => a.type === 'PG').sort((a: any, b: any) => a.number - b.number).map((a: any) => (
+                          <tr key={a.id}>
+                              <td className="border border-black p-2">{a.number}</td>
+                              <td className="border border-black p-2">{a.answer_text} {a.is_correct ? '(Benar)' : '(Salah)'}</td>
+                              <td className="border border-black p-2">{a.answer_key}</td>
+                              <td className="border border-black p-2 text-right">{a.score}</td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+
+              <h3 className="font-bold text-lg mb-2">II. Essay</h3>
+              <div className="space-y-4">
+                  {student.answers.filter((a: any) => a.type === 'ESSAY').sort((a: any, b: any) => a.number - b.number).map((a: any) => (
+                      <div key={a.id} className="border border-black p-4 break-inside-avoid shadow-none">
+                          <div className="flex justify-between font-bold mb-2">
+                             <span>No. {a.number}</span>
+                             <span>Skor: {a.score ?? 'Belum dikoreksi'}</span>
+                          </div>
+                          <p className="text-sm mb-2"><span className="font-semibold text-black">Kunci:</span> {a.answer_key}</p>
+                          <div className="p-3 border border-slate-300 italic whitespace-pre-wrap">
+                              {a.answer_text || "Tidak menjawab"}
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </div>
+        ))}
+      </div>
+    )}
+    </>
   );
 }
 
