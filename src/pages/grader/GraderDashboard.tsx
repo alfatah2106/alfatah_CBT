@@ -277,21 +277,45 @@ export default function GraderDashboard() {
               <table className="w-full border-collapse border border-black mb-6 text-sm">
                   <thead>
                       <tr>
-                          <th className="border border-black p-2 text-left w-12">No</th>
+                          <th className="border border-black p-2 text-left w-24">No</th>
                           <th className="border border-black p-2 text-left">Jawaban Siswa</th>
-                          <th className="border border-black p-2 text-left">Kunci</th>
-                          <th className="border border-black p-2 text-right">Skor</th>
+                          <th className="border border-black p-2 text-right w-24">Skor</th>
                       </tr>
                   </thead>
                   <tbody>
-                      {student.answers.filter((a: any) => a.type === 'PG').sort((a: any, b: any) => a.number - b.number).map((a: any) => (
-                          <tr key={a.id}>
-                              <td className="border border-black p-2">{a.number}</td>
-                              <td className="border border-black p-2">{a.answer_text} {a.is_correct ? '(Benar)' : '(Salah)'}</td>
-                              <td className="border border-black p-2">{a.answer_key}</td>
-                              <td className="border border-black p-2 text-right">{a.score}</td>
-                          </tr>
-                      ))}
+                      {(() => {
+                          const pgAnswers = student.answers.filter((a: any) => a.type === 'PG').sort((a: any, b: any) => a.number - b.number);
+                          const chunks = [];
+                          for (let i = 0; i < pgAnswers.length; i += 5) {
+                              chunks.push(pgAnswers.slice(i, i + 5));
+                          }
+                          return chunks.map((chunk, idx) => {
+                              const start = chunk[0].number;
+                              const end = chunk[chunk.length - 1].number;
+                              const range = start === end ? `${start}` : `${start}-${end}`;
+                              const chunkScore = chunk.reduce((sum: number, a: any) => sum + (Number(a.score) || 0), 0);
+                              
+                              return (
+                                  <tr key={idx}>
+                                      <td className="border border-black p-2">{range}</td>
+                                      <td className="border border-black p-2 tracking-widest font-mono font-medium text-base">
+                                          {chunk.map((a: any, i: number) => {
+                                              const isCorrect = a.answer_text && a.answer_key && a.answer_text.trim().toLowerCase() === a.answer_key.trim().toLowerCase();
+                                              return (
+                                                  <span key={a.id || i}>
+                                                      <span className={isCorrect ? "" : "text-red-500 font-bold underline"}>
+                                                          {a.answer_text || '-'}
+                                                      </span>
+                                                      {i < chunk.length - 1 ? ", " : ""}
+                                                  </span>
+                                              );
+                                          })}
+                                      </td>
+                                      <td className="border border-black p-2 text-right">{chunkScore}</td>
+                                  </tr>
+                              );
+                          });
+                      })()}
                   </tbody>
               </table>
 
@@ -355,16 +379,19 @@ function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pgAnswers.map((a: any) => (
-                  <TableRow key={a.id}>
-                    <TableCell>{a.number}</TableCell>
-                    <TableCell className={a.is_correct ? "text-emerald-600" : "text-red-600"}>
-                      {a.answer_text}
-                    </TableCell>
-                    <TableCell>{a.answer_key}</TableCell>
-                    <TableCell className="text-right font-mono">{a.score}</TableCell>
-                  </TableRow>
-                ))}
+                {pgAnswers.map((a: any) => {
+                  const isCorrect = a.answer_text && a.answer_key && a.answer_text.trim().toLowerCase() === a.answer_key.trim().toLowerCase();
+                  return (
+                    <TableRow key={a.id}>
+                      <TableCell>{a.number}</TableCell>
+                      <TableCell className={isCorrect ? "text-emerald-600 font-medium" : "text-red-600 font-medium"}>
+                        {a.answer_text || '-'}
+                      </TableCell>
+                      <TableCell>{a.answer_key}</TableCell>
+                      <TableCell className="text-right font-mono">{a.score}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </section>
