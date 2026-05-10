@@ -4,14 +4,22 @@
 @import "@fontsource-variable/geist";
 
 @media print {
+  @page {
+    margin: 1cm;
+  }
   .no-print {
     display: none !important;
   }
   .print-only {
     display: block !important;
+    position: static !important;
   }
-  body, html {
+  body, html, #root {
     background: white !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    position: static !important;
   }
 }
 @media screen {

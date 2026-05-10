@@ -260,9 +260,9 @@ export default function GraderDashboard() {
     </div>
 
     {isPrinting && printData && (
-      <div className="print-only fixed top-0 left-0 w-full bg-white z-[9999] text-black">
-        {printData.students.map((student: any) => (
-          <div key={student.student_id} className="p-8 page-break" style={{ pageBreakAfter: 'always' }}>
+      <div className="print-only w-full bg-white text-black min-h-screen">
+        {printData.students.map((student: any, index: number) => (
+          <div key={student.student_id} className="p-8 page-break" style={{ breakAfter: index === printData.students.length - 1 ? 'auto' : 'page', pageBreakAfter: index === printData.students.length - 1 ? 'auto' : 'always' }}>
               <h2 className="text-2xl font-bold mb-1">Lembar Jawab Ujian</h2>
               <p className="mb-4 text-black font-semibold">Judul Ujian: {printData.exam?.title}</p>
               <table className="mb-6">
