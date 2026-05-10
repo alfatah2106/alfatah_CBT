@@ -263,77 +263,95 @@ export default function GraderDashboard() {
       <div className="print-only w-full bg-white text-black min-h-screen">
         {printData.students.map((student: any, index: number) => (
           <div key={student.student_id} className="p-8 page-break" style={{ breakAfter: index === printData.students.length - 1 ? 'auto' : 'page', pageBreakAfter: index === printData.students.length - 1 ? 'auto' : 'always' }}>
-              <h2 className="text-2xl font-bold mb-1">Lembar Jawab Ujian</h2>
-              <p className="mb-4 text-black font-semibold">Judul Ujian: {printData.exam?.title}</p>
-              <table className="mb-6">
-                 <tbody>
-                   <tr><td className="font-semibold pr-4">Nama</td><td>: {student.student_name}</td></tr>
-                   <tr><td className="font-semibold pr-4">Kelas</td><td>: {student.class}</td></tr>
-                   <tr><td className="font-semibold pr-4">Total Nilai</td><td>: {student.total_score}</td></tr>
-                 </tbody>
-              </table>
-              
-              <h3 className="font-bold text-lg mb-2">I. Pilihan Ganda</h3>
-              <table className="w-full border-collapse border border-black mb-6 text-sm">
-                  <thead>
-                      <tr>
-                          <th className="border border-black p-2 text-left w-24">No</th>
-                          <th className="border border-black p-2 text-left">Jawaban Siswa</th>
-                          <th className="border border-black p-2 text-right w-24">Skor</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      {(() => {
-                          const pgAnswers = student.answers.filter((a: any) => a.type === 'PG').sort((a: any, b: any) => a.number - b.number);
-                          const chunks = [];
-                          for (let i = 0; i < pgAnswers.length; i += 5) {
-                              chunks.push(pgAnswers.slice(i, i + 5));
-                          }
-                          return chunks.map((chunk, idx) => {
-                              const start = chunk[0].number;
-                              const end = chunk[chunk.length - 1].number;
-                              const range = start === end ? `${start}` : `${start}-${end}`;
-                              const chunkScore = chunk.reduce((sum: number, a: any) => sum + (Number(a.score) || 0), 0);
-                              
-                              return (
-                                  <tr key={idx}>
-                                      <td className="border border-black p-2">{range}</td>
-                                      <td className="border border-black p-2 tracking-widest font-mono font-medium text-base">
-                                          {chunk.map((a: any, i: number) => {
-                                              const isCorrect = a.answer_text && a.answer_key && a.answer_text.trim().toLowerCase() === a.answer_key.trim().toLowerCase();
-                                              return (
-                                                  <span key={a.id || i}>
-                                                      <span className={isCorrect ? "" : "text-red-500 font-bold underline"}>
-                                                          {a.answer_text || '-'}
-                                                      </span>
-                                                      {i < chunk.length - 1 ? ", " : ""}
-                                                  </span>
-                                              );
-                                          })}
-                                      </td>
-                                      <td className="border border-black p-2 text-right">{chunkScore}</td>
-                                  </tr>
-                              );
-                          });
-                      })()}
-                  </tbody>
-              </table>
+            <table className="w-full">
+              <thead><tr><td><div className="h-2"></div></td></tr></thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <h2 className="text-2xl font-bold mb-1">Lembar Jawab Ujian</h2>
+                    <p className="mb-4 text-black font-semibold">Judul Ujian: {printData.exam?.title}</p>
+                    <table className="mb-6">
+                       <tbody>
+                         <tr><td className="font-semibold pr-4">Nama</td><td>: {student.student_name}</td></tr>
+                         <tr><td className="font-semibold pr-4">Kelas</td><td>: {student.class}</td></tr>
+                         <tr><td className="font-semibold pr-4">Total Nilai</td><td>: {student.total_score}</td></tr>
+                       </tbody>
+                    </table>
+                    
+                    <h3 className="font-bold text-lg mb-2">I. Pilihan Ganda</h3>
+                    <table className="w-full border-collapse border border-black mb-6 text-sm">
+                        <thead>
+                            <tr>
+                                <th className="border border-black p-2 text-left w-24">No</th>
+                                <th className="border border-black p-2 text-left">Jawaban Siswa</th>
+                                <th className="border border-black p-2 text-right w-24">Skor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(() => {
+                                const pgAnswers = student.answers.filter((a: any) => a.type === 'PG').sort((a: any, b: any) => a.number - b.number);
+                                const chunks = [];
+                                for (let i = 0; i < pgAnswers.length; i += 5) {
+                                    chunks.push(pgAnswers.slice(i, i + 5));
+                                }
+                                return chunks.map((chunk, idx) => {
+                                    const start = chunk[0].number;
+                                    const end = chunk[chunk.length - 1].number;
+                                    const range = start === end ? `${start}` : `${start}-${end}`;
+                                    const chunkScore = chunk.reduce((sum: number, a: any) => sum + (Number(a.score) || 0), 0);
+                                    
+                                    return (
+                                        <tr key={idx}>
+                                            <td className="border border-black p-2">{range}</td>
+                                            <td className="border border-black p-2 tracking-widest font-mono font-medium text-base">
+                                                {chunk.map((a: any, i: number) => {
+                                                    const isCorrect = a.answer_text && a.answer_key && a.answer_text.trim().toLowerCase() === a.answer_key.trim().toLowerCase();
+                                                    return (
+                                                        <span key={a.id || i}>
+                                                            <span className={isCorrect ? "" : "text-red-500 font-bold underline"}>
+                                                                {a.answer_text || '-'}
+                                                            </span>
+                                                            {i < chunk.length - 1 ? ", " : ""}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </td>
+                                            <td className="border border-black p-2 text-right">{chunkScore}</td>
+                                        </tr>
+                                    );
+                                });
+                            })()}
+                        </tbody>
+                    </table>
 
-              <h3 className="font-bold text-lg mb-2">II. Essay</h3>
-              <div className="space-y-4">
-                  {student.answers.filter((a: any) => a.type === 'ESSAY').sort((a: any, b: any) => a.number - b.number).map((a: any) => (
-                      <div key={a.id} className="border border-black p-4 break-inside-avoid shadow-none">
-                          <div className="flex justify-between font-bold mb-2">
-                             <span>No. {a.number}</span>
-                             <span>Skor: {a.score ?? 'Belum dikoreksi'}</span>
-                          </div>
-                          <p className="text-sm mb-2"><span className="font-semibold text-black">Kunci:</span> {a.answer_key}</p>
-                          <div className="p-3 border border-slate-300 italic whitespace-pre-wrap">
-                              {a.answer_text || "Tidak menjawab"}
-                          </div>
-                      </div>
-                  ))}
-              </div>
+                    <h3 className="font-bold text-lg mb-2">II. Essay</h3>
+                    <div className="space-y-4">
+                        {student.answers.filter((a: any) => a.type === 'ESSAY').sort((a: any, b: any) => a.number - b.number).map((a: any) => (
+                            <div key={a.id} className="border border-black p-4 break-inside-avoid shadow-none">
+                                <div className="flex justify-between font-bold mb-2">
+                                   <span>No. {a.number}</span>
+                                   <span>Skor: {a.score ?? 'Belum dikoreksi'}</span>
+                                </div>
+                                <p className="text-sm mb-2"><span className="font-semibold text-black">Kunci:</span> {a.answer_key}</p>
+                                <div className="p-3 border border-slate-300 italic whitespace-pre-wrap">
+                                    {a.answer_text || "Tidak menjawab"}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot className="table-footer-group">
+                <tr>
+                  <td>
+                    <div className="text-right text-xs text-slate-500 italic pt-6 pb-2 border-t border-slate-200 mt-8">
+                      {printData.exam?.title} - Lembar Jawab: {student.student_name} ({student.class})
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         ))}
       </div>
