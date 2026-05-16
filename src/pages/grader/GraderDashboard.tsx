@@ -1,15 +1,79 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
-import { Download, Printer } from 'lucide-react';
+import { Download, Printer, Search, Loader2 } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportExcel';
+import { cn } from "@/lib/utils";
+
+function ExamSearchSelect({ exams, selectedExamId, onSelect }: { exams: any[], selectedExamId: string, onSelect: (id: string) => void }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedExam = exams.find((e) => e.id.toString() === selectedExamId);
+  const displayValue = open ? query : (selectedExam ? selectedExam.title : '');
+
+  const filteredExams = exams.filter(e => e.title.toLowerCase().includes(query.toLowerCase()));
+
+  return (
+    <div className="relative w-64" ref={containerRef}>
+      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+      <Input
+        placeholder="Cari judul ujian..."
+        className="pl-9 bg-white"
+        value={displayValue}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (!open) setOpen(true);
+        }}
+        onFocus={() => {
+          setOpen(true);
+          setQuery('');
+        }}
+      />
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+          {filteredExams.length === 0 ? (
+            <div className="p-3 text-sm text-slate-500 text-center">Ujian tidak ditemukan</div>
+          ) : (
+            filteredExams.map((exam) => (
+              <div
+                key={exam.id}
+                className={cn(
+                  "p-3 text-sm hover:bg-slate-50 cursor-pointer border-b last:border-0",
+                  selectedExamId === exam.id.toString() ? "bg-slate-50 font-medium text-blue-700" : ""
+                )}
+                onClick={() => {
+                  onSelect(exam.id.toString());
+                  setOpen(false);
+                  setQuery('');
+                }}
+              >
+                {exam.title}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function GraderDashboard() {
   const [exams, setExams] = useState<any[]>([]);
@@ -132,14 +196,7 @@ export default function GraderDashboard() {
                 <CardDescription>Pilih ujian untuk melihat daftar siswa.</CardDescription>
               </div>
               <div className="flex gap-4 items-center">
-                <Select value={selectedExamId} onValueChange={setSelectedExamId}>
-                  <SelectTrigger className="w-64">
-                    <SelectValue placeholder="Pilih Pelajaran/Ujian" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {exams.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ExamSearchSelect exams={exams} selectedExamId={selectedExamId} onSelect={setSelectedExamId} />
                 {selectedExamId && (
                   <Button 
                     variant="outline" 
@@ -200,14 +257,7 @@ export default function GraderDashboard() {
               <CardDescription>Pilih ujian dan unduh rekapitulasi nilai akhir siswa.</CardDescription>
             </CardHeader>
             <CardContent className="flex gap-4 items-center mb-6">
-              <Select value={selectedExamId} onValueChange={setSelectedExamId}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Pilih Pelajaran/Ujian" />
-                </SelectTrigger>
-                <SelectContent>
-                  {exams.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <ExamSearchSelect exams={exams} selectedExamId={selectedExamId} onSelect={setSelectedExamId} />
               <Button 
                 variant="outline" 
                 onClick={handleDownloadExcel} 
@@ -362,18 +412,26 @@ export default function GraderDashboard() {
 
 function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
   const [essayScores, setEssayScores] = useState<any>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Pisahkan tipe soal
   const pgAnswers = student.answers.filter((a: any) => a.type === 'PG');
   const essayAnswers = student.answers.filter((a: any) => a.type === 'ESSAY');
 
   const handleSaveAll = async () => {
-    // Logika simpan semua nilai essay yang diubah
-    for (const [id, score] of Object.entries(essayScores)) {
-      await api.submitScore(Number(id), Number(score));
+    setIsSaving(true);
+    try {
+      for (const [id, score] of Object.entries(essayScores)) {
+        await api.submitScore(Number(id), Number(score));
+      }
+      setIsOpen(false);
+      onSaveSuccess();
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat menyimpan koresi. Silakan coba lagi.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsOpen(false);
-    onSaveSuccess();
   };
 
   return (
@@ -456,7 +514,10 @@ function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
                 <p className="text-sm text-blue-600">Total Nilai Akhir</p>
                 <h2 className="text-3xl font-black text-blue-800">{student.total_score}</h2>
              </div>
-             <Button size="lg" onClick={handleSaveAll}>Simpan Seluruh Koreksi</Button>
+             <Button size="lg" onClick={handleSaveAll} disabled={isSaving}>
+               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+               {isSaving ? "Menyimpan..." : "Simpan Seluruh Koreksi"}
+             </Button>
           </div>
         </div>
       </DialogContent>
