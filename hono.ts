@@ -8,7 +8,21 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-app.use('/api/*', cors());
+app.use('*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
+  exposeHeaders: ['Content-Length'],
+  maxAge: 600,
+  credentials: true,
+}));
+
+app.options('*', (c) => c.text('', 204));
+
+app.onError((err, c) => {
+  console.error(err);
+  return c.text('Internal Server Error', 500);
+});
 
 // Helper to get DB pool
 const getDb = (env: Bindings) => {

@@ -418,17 +418,27 @@ function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
           <section>
             <h3 className="font-bold text-lg mb-3 text-orange-700">II. Essay (Koreksi Manual)</h3>
             <div className="space-y-4">
-              {essayAnswers.map((a: any) => (
+              {essayAnswers.map((a: any, index: number) => (
                 <div key={a.id} className="p-4 border rounded-lg bg-slate-50 space-y-2">
                   <div className="flex justify-between items-start">
                     <span className="font-bold text-sm">Soal No. {a.number}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">Skor:</span>
                       <Input
+                        id={`essay-score-${index}`}
                         type="number"
                         className="w-20 bg-white"
                         defaultValue={a.score}
                         onChange={(e) => setEssayScores({...essayScores, [a.id]: e.target.value})}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const nextInput = document.getElementById(`essay-score-${index + 1}`);
+                            if (nextInput) {
+                              nextInput.focus();
+                            }
+                          }
+                        }}
                       />
                     </div>
                   </div>
