@@ -130,7 +130,7 @@ export default function GraderDashboard() {
       'ID Murid': s.student_id,
       'Nama Murid': s.student_name,
       'Kelas': s.class,
-      'Total Nilai': s.total_score,
+      'Total Nilai': Number(s.total_score || 0).toFixed(2),
       'Koreksi Selesai': s.is_graded ? 'Ya' : 'Belum'
     }));
 
@@ -284,7 +284,7 @@ export default function GraderDashboard() {
                       <TableRow key={s.student_id}>
                         <TableCell className="font-medium">{s.student_name}</TableCell>
                         <TableCell>{s.class}</TableCell>
-                        <TableCell className="text-right font-bold text-blue-600">{s.total_score}</TableCell>
+                        <TableCell className="text-right font-bold text-blue-600">{Number(s.total_score || 0).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                     {students.length === 0 && (
@@ -309,14 +309,14 @@ export default function GraderDashboard() {
               if (s.student_id === selectedStudent.student_id) {
                 let totalScoreDiff = 0;
                 Object.entries(updatedScores).forEach(([ansId, newScore]: [string, any]) => {
-                  const oldAns = selectedStudent.answers.find((a: any) => a.id === Number(ansId));
+                  const oldAns = selectedStudent.answers.find((a: any) => String(a.id) === String(ansId));
                   if (oldAns) {
                     const oldScore = Number(oldAns.score) || 0;
                     totalScoreDiff += (Number(newScore) - oldScore);
                   }
                 });
                 
-                const newTotalScore = parseFloat((Number(s.total_score || 0) + totalScoreDiff).toFixed(2));
+                const newTotalScore = (Number(s.total_score || 0) + totalScoreDiff).toFixed(2);
                 
                 const essayAnswers = selectedStudent.answers.filter((a: any) => a.type === 'ESSAY');
                 let isGraded = true;
@@ -450,6 +450,18 @@ function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
   const pgAnswers = student.answers.filter((a: any) => a.type === 'PG');
   const essayAnswers = student.answers.filter((a: any) => a.type === 'ESSAY');
 
+  const baseScore = Number(student.total_score || 0);
+  let currentDiff = 0;
+  Object.entries(essayScores).forEach(([ansId, newScore]: [string, any]) => {
+    const oldAns = essayAnswers.find((a: any) => String(a.id) === String(ansId));
+    if (oldAns) {
+      const oldScore = Number(oldAns.score) || 0;
+      const newScoreNum = newScore === '' ? 0 : Number(newScore);
+      currentDiff += (newScoreNum - oldScore);
+    }
+  });
+  const dynamicTotalScore = (baseScore + currentDiff).toFixed(2);
+
   const handleSaveAll = async () => {
     setIsSaving(true);
     try {
@@ -516,11 +528,19 @@ function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
                       <span className="text-sm font-medium">Skor:</span>
                       <Input
                         id={`essay-score-${index}`}
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="w-20 bg-white"
                         defaultValue={a.score}
-                        onChange={(e) => setEssayScores({...essayScores, [a.id]: e.target.value})}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '');
+                          setEssayScores({...essayScores, [a.id]: val});
+                          e.target.value = val;
+                        }}
                         onKeyDown={(e) => {
+                          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                            e.preventDefault();
+                          }
                           if (e.key === 'Enter') {
                             e.preventDefault();
                             const nextInput = document.getElementById(`essay-score-${index + 1}`);
@@ -544,7 +564,7 @@ function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
           <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl">
              <div>
                 <p className="text-sm text-blue-600">Total Nilai Akhir</p>
-                <h2 className="text-3xl font-black text-blue-800">{student.total_score}</h2>
+                <h2 className="text-3xl font-black text-blue-800">{dynamicTotalScore}</h2>
              </div>
              <Button size="lg" onClick={handleSaveAll} disabled={isSaving}>
                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
