@@ -270,17 +270,11 @@ app.get('/api/admin/reports/:examId', async (c) => {
   const pool = getDb(c.env);
   const { rows } = await pool.query(`
     SELECT st.id as student_id, st.name as student_name, st.class,
-           COALESCE(SUM(a.score), 0) as total_score,
-           NOT EXISTS (
-             SELECT 1 FROM questions q2 
-             LEFT JOIN answers a2 ON a2.question_id = q2.id AND a2.session_id = s.id
-             WHERE q2.exam_id = s.exam_id AND q2.type = 'ESSAY' AND a2.score IS NULL
-           ) as is_graded
+           COALESCE(s.total_score, 0) as total_score,
+           COALESCE(s.is_graded, true) as is_graded
     FROM sessions s
     JOIN students st ON s.student_id = st.id
-    LEFT JOIN answers a ON s.id = a.session_id
     WHERE s.exam_id = $1
-    GROUP BY st.id, st.name, st.class, s.id, s.exam_id
     ORDER BY st.class, st.name
   `, [examId]);
   return c.json(rows);
@@ -368,7 +362,21 @@ app.post('/api/student/answer', async (c) => {
 app.post('/api/student/finish', async (c) => {
   const { sessionId } = await c.req.json();
   const pool = getDb(c.env);
-  await pool.query('UPDATE sessions SET status = $1, end_time = CURRENT_TIMESTAMP WHERE id = $2', ['finished', sessionId]);
+  
+  await pool.query(`
+    UPDATE sessions s
+    SET 
+      status = $1, 
+      end_time = CURRENT_TIMESTAMP,
+      total_score = COALESCE((SELECT SUM(score) FROM answers WHERE session_id = s.id), 0),
+      is_graded = NOT EXISTS (
+        SELECT 1 FROM questions q 
+        LEFT JOIN answers a ON a.question_id = q.id AND a.session_id = s.id
+        WHERE q.exam_id = s.exam_id AND q.type = 'ESSAY' AND a.score IS NULL
+      )
+    WHERE id = $2
+  `, ['finished', sessionId]);
+  
   return c.json({ success: true });
 });
 
@@ -427,7 +435,20 @@ app.get('/api/proctor/sessions/:examId', async (c) => {
 app.post('/api/proctor/session/:sessionId/close', async (c) => {
   const sessionId = c.req.param('sessionId');
   const pool = getDb(c.env);
-  await pool.query('UPDATE sessions SET status = $1 WHERE id = $2', ['forced_close', sessionId]);
+  
+  await pool.query(`
+    UPDATE sessions s
+    SET 
+      status = $1,
+      total_score = COALESCE((SELECT SUM(score) FROM answers WHERE session_id = s.id), 0),
+      is_graded = NOT EXISTS (
+        SELECT 1 FROM questions q 
+        LEFT JOIN answers a ON a.question_id = q.id AND a.session_id = s.id
+        WHERE q.exam_id = s.exam_id AND q.type = 'ESSAY' AND a.score IS NULL
+      )
+    WHERE id = $2
+  `, ['forced_close', sessionId]);
+  
   return c.json({ success: true });
 });
 
@@ -448,7 +469,24 @@ app.get('/api/grader/answers/:examId', async (c) => {
 app.post('/api/grader/score', async (c) => {
   const { answerId, score } = await c.req.json();
   const pool = getDb(c.env);
-  await pool.query('UPDATE answers SET score = $1 WHERE id = $2', [score, answerId]);
+  
+  const updateRes = await pool.query('UPDATE answers SET score = $1 WHERE id = $2 RETURNING session_id', [score, answerId]);
+  
+  if (updateRes.rowCount > 0 && updateRes.rows[0]) {
+    const sessionId = updateRes.rows[0].session_id;
+    await pool.query(`
+      UPDATE sessions s
+      SET 
+        total_score = COALESCE((SELECT SUM(score) FROM answers WHERE session_id = s.id), 0),
+        is_graded = NOT EXISTS (
+          SELECT 1 FROM questions q 
+          LEFT JOIN answers a ON a.question_id = q.id AND a.session_id = s.id
+          WHERE q.exam_id = s.exam_id AND q.type = 'ESSAY' AND a.score IS NULL
+        )
+      WHERE id = $1
+    `, [sessionId]);
+  }
+  
   return c.json({ success: true });
 });
 

@@ -304,7 +304,39 @@ export default function GraderDashboard() {
           isOpen={isModalOpen}
           setIsOpen={setIsModalOpen}
           student={selectedStudent}
-          onSaveSuccess={() => loadStudentList(parseInt(selectedExamId))}
+          onSaveSuccess={(updatedScores: any) => {
+            setStudents(prev => prev.map(s => {
+              if (s.student_id === selectedStudent.student_id) {
+                let totalScoreDiff = 0;
+                Object.entries(updatedScores).forEach(([ansId, newScore]: [string, any]) => {
+                  const oldAns = selectedStudent.answers.find((a: any) => a.id === Number(ansId));
+                  if (oldAns) {
+                    const oldScore = Number(oldAns.score) || 0;
+                    totalScoreDiff += (Number(newScore) - oldScore);
+                  }
+                });
+                
+                const newTotalScore = parseFloat((Number(s.total_score || 0) + totalScoreDiff).toFixed(2));
+                
+                const essayAnswers = selectedStudent.answers.filter((a: any) => a.type === 'ESSAY');
+                let isGraded = true;
+                essayAnswers.forEach((ans: any) => {
+                  const updatedScore = updatedScores[ans.id];
+                  const finalScore = updatedScore !== undefined ? updatedScore : ans.score;
+                  if (finalScore === null || finalScore === undefined || finalScore === '') {
+                    isGraded = false;
+                  }
+                });
+
+                return {
+                  ...s,
+                  total_score: newTotalScore,
+                  is_graded: isGraded
+                };
+              }
+              return s;
+            }));
+          }}
         />
       )}
     </div>
@@ -425,7 +457,7 @@ function KoreksiModal({ isOpen, setIsOpen, student, onSaveSuccess }: any) {
         await api.submitScore(Number(id), Number(score));
       }
       setIsOpen(false);
-      onSaveSuccess();
+      onSaveSuccess(essayScores);
     } catch (error) {
       console.error(error);
       alert("Terjadi kesalahan saat menyimpan koresi. Silakan coba lagi.");
