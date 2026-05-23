@@ -348,7 +348,8 @@ app.post('/api/student/answer', async (c) => {
   if (qRes.rowCount > 0) {
     const q = qRes.rows[0];
     if (q.type === 'PG') {
-      score = (answerText === q.answer_key) ? (q.weight || 1) : 0;
+      const isCorrect = answerText && q.answer_key && String(answerText).trim().toLowerCase() === String(q.answer_key).trim().toLowerCase();
+      score = isCorrect ? (q.weight || 1) : 0;
     }
   }
 
