@@ -402,7 +402,12 @@ app.post('/api/student/ping', async (c) => {
 // --- Proctor Endpoints ---
 app.get('/api/proctor/exams', async (c) => {
   const pool = getDb(c.env);
-  const { rows } = await pool.query('SELECT * FROM exams ORDER BY id DESC');
+  const { rows } = await pool.query(`
+    SELECT e.* 
+    FROM exams e 
+    LEFT JOIN subjects s ON e.subject_id = s.id 
+    ORDER BY s.name ASC, e.title ASC
+  `);
   return c.json(rows);
 });
 

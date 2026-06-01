@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
-import { ShieldAlert, Wifi, WifiOff, Play, Square, Search } from 'lucide-react';
+import { ShieldAlert, Wifi, WifiOff, Play, Square, Search, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function ProctorDashboard() {
   const [exams, setExams] = useState<any[]>([]);
@@ -13,6 +13,7 @@ export default function ProctorDashboard() {
   const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isExamsExpanded, setIsExamsExpanded] = useState(true);
 
   useEffect(() => {
     loadExams();
@@ -93,12 +94,17 @@ export default function ProctorDashboard() {
         </div>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Daftar Ujian</CardTitle>
-              <CardDescription>Aktifkan atau nonaktifkan ujian agar murid bisa login.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setIsExamsExpanded(!isExamsExpanded)}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                {isExamsExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              </div>
+              <div>
+                <CardTitle>Daftar Ujian ({exams.length})</CardTitle>
+                <CardDescription>Aktifkan atau nonaktifkan ujian agar murid bisa login.</CardDescription>
+              </div>
             </div>
-            <div className="relative w-64">
+            <div className="relative w-64" onClick={(e) => e.stopPropagation()}>
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
               <Input 
                 placeholder="Cari judul ujian..." 
@@ -108,60 +114,67 @@ export default function ProctorDashboard() {
               />
             </div>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kode</TableHead>
-                  <TableHead>Judul Ujian</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {exams.filter(e => e.title.toLowerCase().includes(searchExamQuery.toLowerCase()) || e.code?.toLowerCase().includes(searchExamQuery.toLowerCase())).length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center text-slate-500">Belum ada ujian</TableCell></TableRow>
-                ) : (
-                  exams.filter(e => e.title.toLowerCase().includes(searchExamQuery.toLowerCase()) || e.code?.toLowerCase().includes(searchExamQuery.toLowerCase())).map((e) => (
-                    <TableRow key={e.id} className={selectedExamId === e.id ? 'bg-slate-50' : ''}>
-                      <TableCell className="font-medium">{e.code}</TableCell>
-                      <TableCell>{e.title}</TableCell>
-                      <TableCell>
-                        {e.is_active ? (
-                          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">Aktif</Badge>
-                        ) : (
-                          <Badge variant="secondary">Nonaktif</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button 
-                          variant={e.is_active ? "destructive" : "default"} 
-                          size="sm" 
-                          onClick={() => handleToggleExam(e.id, e.is_active)}
-                          className="flex items-center gap-2"
-                        >
-                          {e.is_active ? <><Square className="w-4 h-4" /> Nonaktifkan</> : <><Play className="w-4 h-4" /> Aktifkan</>}
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => setSelectedExamId(e.id)}
-                        >
-                          Lihat Sesi
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
+          {isExamsExpanded && (
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Kode</TableHead>
+                    <TableHead>Judul Ujian</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {exams.filter(e => e.title.toLowerCase().includes(searchExamQuery.toLowerCase()) || e.code?.toLowerCase().includes(searchExamQuery.toLowerCase())).length === 0 ? (
+                    <TableRow><TableCell colSpan={4} className="text-center text-slate-500">Belum ada ujian</TableCell></TableRow>
+                  ) : (
+                    exams.filter(e => e.title.toLowerCase().includes(searchExamQuery.toLowerCase()) || e.code?.toLowerCase().includes(searchExamQuery.toLowerCase())).map((e) => (
+                      <TableRow key={e.id} className={selectedExamId === e.id ? 'bg-slate-50' : ''}>
+                        <TableCell className="font-medium">{e.code}</TableCell>
+                        <TableCell>{e.title}</TableCell>
+                        <TableCell>
+                          {e.is_active ? (
+                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">Aktif</Badge>
+                          ) : (
+                            <Badge variant="secondary">Nonaktif</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button 
+                            variant={e.is_active ? "destructive" : "default"} 
+                            size="sm" 
+                            onClick={() => handleToggleExam(e.id, e.is_active)}
+                            className="flex items-center gap-2 inline-flex"
+                          >
+                            {e.is_active ? <><Square className="w-4 h-4" /> Nonaktifkan</> : <><Play className="w-4 h-4" /> Aktifkan</>}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setSelectedExamId(e.id);
+                              setIsExamsExpanded(false);
+                            }}
+                          >
+                            Lihat Sesi
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          )}
         </Card>
 
         {selectedExamId && (
           <Card>
             <CardHeader>
-              <CardTitle>Daftar Sesi Murid</CardTitle>
+              <CardTitle>
+                Daftar Sesi Murid - {exams.find(e => e.id === selectedExamId)?.title || `Ujian ${selectedExamId}`}
+              </CardTitle>
               <CardDescription>Status koneksi dan pengerjaan murid secara real-time.</CardDescription>
             </CardHeader>
             <CardContent>
