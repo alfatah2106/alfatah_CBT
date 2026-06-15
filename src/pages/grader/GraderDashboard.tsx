@@ -328,19 +328,19 @@ export default function GraderDashboard() {
                   }
                 });
 
-                const newAnswers = s.answers.map((a: any) => {
+                const newAnswers = s.answers ? s.answers.map((a: any) => {
                   const updatedVal = updatedScores[a.id];
                   if (updatedVal !== undefined) {
                     return { ...a, score: updatedVal === '' ? 0 : Number(updatedVal) };
                   }
                   return a;
-                });
+                }) : undefined;
 
                 return {
                   ...s,
                   total_score: newTotalScore,
                   is_graded: isGraded,
-                  answers: newAnswers
+                  ...(newAnswers ? { answers: newAnswers } : {})
                 };
               }
               return s;

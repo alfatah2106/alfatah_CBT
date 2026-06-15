@@ -49,7 +49,7 @@ app.get('/api/admin/stats', async (c) => {
 app.post('/api/staff/login', async (c) => {
   const { username, password, role } = await c.req.json();
   const pool = getDb(c.env);
-  
+
   // Auto-create default admin if not exists (for demo purposes)
   if (username === 'admin' && password === 'admin' && role === 'admin') {
     await pool.query('INSERT INTO users (username, password, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', ['admin', 'admin', 'admin']);
@@ -79,7 +79,7 @@ app.post('/api/admin/students/bulk', async (c) => {
   const body = await c.req.json();
   const students = body.students; // Array of { id, name, class }
   const pool = getDb(c.env);
-  
+
   // Simple bulk insert (in production, use parameterized queries properly)
   for (const s of students) {
     await pool.query('INSERT INTO students (id, name, class) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, class = EXCLUDED.class', [s.id, s.name, s.class]);
@@ -230,7 +230,7 @@ app.post('/api/admin/exams/:examId/questions', async (c) => {
   const { number, type, answer_key, weight } = await c.req.json();
   const pool = getDb(c.env);
   try { await pool.query('ALTER TABLE questions ADD COLUMN IF NOT EXISTS weight INTEGER DEFAULT 1'); } catch (e) {}
-  
+
   const { rows } = await pool.query('SELECT id FROM questions WHERE exam_id = $1 AND number = $2', [examId, number]);
   if (rows.length > 0) {
     await pool.query('UPDATE questions SET type = $1, answer_key = $2, weight = $3 WHERE id = $4', [type, answer_key, weight || 1, rows[0].id]);
@@ -246,7 +246,7 @@ app.post('/api/admin/exams/:examId/questions/bulk', async (c) => {
   const questions = body.questions;
   const pool = getDb(c.env);
   try { await pool.query('ALTER TABLE questions ADD COLUMN IF NOT EXISTS weight INTEGER DEFAULT 1'); } catch (e) {}
-  
+
   for (const q of questions) {
     const { rows } = await pool.query('SELECT id FROM questions WHERE exam_id = $1 AND number = $2', [examId, q.number]);
     if (rows.length > 0) {
@@ -284,7 +284,7 @@ app.get('/api/admin/exams/:examId/students/:studentId/answers', async (c) => {
   const examId = c.req.param('examId');
   const studentId = c.req.param('studentId');
   const pool = getDb(c.env);
-  
+
   const { rows } = await pool.query(`
     SELECT a.id, a.question_id, a.answer_text, a.score, q.number, q.type, q.answer_key, q.weight,
            (a.answer_text = q.answer_key) as is_correct
@@ -294,7 +294,7 @@ app.get('/api/admin/exams/:examId/students/:studentId/answers', async (c) => {
     WHERE s.exam_id = $1 AND s.student_id = $2
     ORDER BY q.number
   `, [examId, studentId]);
-  
+
   return c.json(rows);
 });
 
@@ -302,25 +302,25 @@ app.get('/api/admin/exams/:examId/students/:studentId/answers', async (c) => {
 app.post('/api/student/login', async (c) => {
   const { studentId, examCode } = await c.req.json();
   const pool = getDb(c.env);
-  
+
   const studentRes = await pool.query('SELECT * FROM students WHERE id = $1', [studentId]);
   if (studentRes.rowCount === 0) return c.json({ error: 'Student not found' }, 404);
-  
+
   const examRes = await pool.query('SELECT * FROM exams WHERE code = $1 AND is_active = true', [examCode]);
   if (examRes.rowCount === 0) return c.json({ error: 'Exam not found or inactive' }, 404);
-  
+
   const exam = examRes.rows[0];
-  
+
   // Create or get session
   let sessionRes = await pool.query('SELECT * FROM sessions WHERE student_id = $1 AND exam_id = $2', [studentId, exam.id]);
   if (sessionRes.rowCount === 0) {
     sessionRes = await pool.query('INSERT INTO sessions (student_id, exam_id) VALUES ($1, $2) RETURNING *', [studentId, exam.id]);
   }
-  
+
   const session = sessionRes.rows[0];
   if (session.status === 'forced_close') return c.json({ error: 'Session closed by proctor' }, 403);
   if (session.status === 'finished') return c.json({ error: 'Anda sudah menyelesaikan ujian ini' }, 403);
-  
+
   return c.json({ student: studentRes.rows[0], exam, session });
 });
 
@@ -341,7 +341,7 @@ app.post('/api/student/violation', async (c) => {
 app.post('/api/student/answer', async (c) => {
   const { sessionId, questionId, answerText } = await c.req.json();
   const pool = getDb(c.env);
-  
+
   // Get question details to auto-grade if PG
   const qRes = await pool.query('SELECT type, answer_key, weight FROM questions WHERE id = $1', [questionId]);
   let score = null;
@@ -363,21 +363,21 @@ app.post('/api/student/answer', async (c) => {
 app.post('/api/student/finish', async (c) => {
   const { sessionId } = await c.req.json();
   const pool = getDb(c.env);
-  
+
   await pool.query(`
     UPDATE sessions s
-    SET 
-      status = $1, 
+    SET
+      status = $1,
       end_time = CURRENT_TIMESTAMP,
       total_score = COALESCE((SELECT SUM(score) FROM answers WHERE session_id = s.id), 0),
       is_graded = NOT EXISTS (
-        SELECT 1 FROM questions q 
+        SELECT 1 FROM questions q
         LEFT JOIN answers a ON a.question_id = q.id AND a.session_id = s.id
         WHERE q.exam_id = s.exam_id AND q.type = 'ESSAY' AND a.score IS NULL
       )
     WHERE id = $2
   `, ['finished', sessionId]);
-  
+
   return c.json({ success: true });
 });
 
@@ -385,14 +385,14 @@ app.post('/api/student/ping', async (c) => {
   const { sessionId } = await c.req.json();
   const pool = getDb(c.env);
   await pool.query('UPDATE sessions SET last_ping = CURRENT_TIMESTAMP WHERE id = $1', [sessionId]);
-  
+
   const { rows } = await pool.query(`
-    SELECT s.status, e.is_active 
-    FROM sessions s 
-    JOIN exams e ON s.exam_id = e.id 
+    SELECT s.status, e.is_active
+    FROM sessions s
+    JOIN exams e ON s.exam_id = e.id
     WHERE s.id = $1
   `, [sessionId]);
-  
+
   if (rows.length > 0) {
     return c.json({ success: true, status: rows[0].status, is_active: rows[0].is_active });
   }
@@ -403,9 +403,9 @@ app.post('/api/student/ping', async (c) => {
 app.get('/api/proctor/exams', async (c) => {
   const pool = getDb(c.env);
   const { rows } = await pool.query(`
-    SELECT e.* 
-    FROM exams e 
-    LEFT JOIN subjects s ON e.subject_id = s.id 
+    SELECT e.*
+    FROM exams e
+    LEFT JOIN subjects s ON e.subject_id = s.id
     ORDER BY s.name ASC, e.title ASC
   `);
   return c.json(rows);
@@ -416,12 +416,12 @@ app.post('/api/proctor/exam/:id/toggle', async (c) => {
   const { is_active } = await c.req.json();
   const pool = getDb(c.env);
   await pool.query('UPDATE exams SET is_active = $1 WHERE id = $2', [is_active, id]);
-  
+
   if (!is_active) {
     // Auto finish all active sessions for this exam when deactivated
     await pool.query("UPDATE sessions SET status = 'finished', end_time = CURRENT_TIMESTAMP WHERE exam_id = $1 AND status = 'active'", [id]);
   }
-  
+
   return c.json({ success: true });
 });
 
@@ -430,8 +430,8 @@ app.get('/api/proctor/sessions/:examId', async (c) => {
   const pool = getDb(c.env);
   const { rows } = await pool.query(`
     SELECT s.*, st.name as student_name, st.class as student_class
-    FROM sessions s 
-    JOIN students st ON s.student_id = st.id 
+    FROM sessions s
+    JOIN students st ON s.student_id = st.id
     WHERE s.exam_id = $1
     ORDER BY st.class, st.name
   `, [examId]);
@@ -441,20 +441,20 @@ app.get('/api/proctor/sessions/:examId', async (c) => {
 app.post('/api/proctor/session/:sessionId/close', async (c) => {
   const sessionId = c.req.param('sessionId');
   const pool = getDb(c.env);
-  
+
   await pool.query(`
     UPDATE sessions s
-    SET 
+    SET
       status = $1,
       total_score = COALESCE((SELECT SUM(score) FROM answers WHERE session_id = s.id), 0),
       is_graded = NOT EXISTS (
-        SELECT 1 FROM questions q 
+        SELECT 1 FROM questions q
         LEFT JOIN answers a ON a.question_id = q.id AND a.session_id = s.id
         WHERE q.exam_id = s.exam_id AND q.type = 'ESSAY' AND a.score IS NULL
       )
     WHERE id = $2
   `, ['forced_close', sessionId]);
-  
+
   return c.json({ success: true });
 });
 
@@ -463,7 +463,7 @@ app.get('/api/grader/answers/:examId', async (c) => {
   const examId = c.req.param('examId');
   const pool = getDb(c.env);
   const { rows } = await pool.query(`
-    SELECT a.*, q.number, q.type, q.answer_key, s.student_id 
+    SELECT a.*, q.number, q.type, q.answer_key, s.student_id
     FROM answers a
     JOIN questions q ON a.question_id = q.id
     JOIN sessions s ON a.session_id = s.id
@@ -475,24 +475,24 @@ app.get('/api/grader/answers/:examId', async (c) => {
 app.post('/api/grader/score', async (c) => {
   const { answerId, score } = await c.req.json();
   const pool = getDb(c.env);
-  
+
   const updateRes = await pool.query('UPDATE answers SET score = $1 WHERE id = $2 RETURNING session_id', [score, answerId]);
-  
+
   if (updateRes.rowCount > 0 && updateRes.rows[0]) {
     const sessionId = updateRes.rows[0].session_id;
     await pool.query(`
       UPDATE sessions s
-      SET 
+      SET
         total_score = COALESCE((SELECT SUM(score) FROM answers WHERE session_id = s.id), 0),
         is_graded = NOT EXISTS (
-          SELECT 1 FROM questions q 
+          SELECT 1 FROM questions q
           LEFT JOIN answers a ON a.question_id = q.id AND a.session_id = s.id
           WHERE q.exam_id = s.exam_id AND q.type = 'ESSAY' AND a.score IS NULL
         )
       WHERE id = $1
     `, [sessionId]);
   }
-  
+
   return c.json({ success: true });
 });
 
